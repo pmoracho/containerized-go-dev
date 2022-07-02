@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:1
 
-FROM --platform=${BUILDPLATFORM} golang:1.17-alpine AS base
+FROM --platform=${BUILDPLATFORM} golang:1.18.3-alpine3.16 AS base
 WORKDIR /src
 ENV CGO_ENABLED=0
 COPY go.* .
@@ -13,7 +13,7 @@ ARG TARGETARCH
 RUN --mount=target=. \
     --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/example .
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o /out/example .
 
 FROM base AS unit-test
 RUN --mount=target=. \
@@ -35,12 +35,13 @@ FROM scratch AS unit-test-coverage
 COPY --from=unit-test /out/cover.out /cover.out
 
 FROM scratch AS bin-unix
-COPY --from=build /out/example /
+COPY --from=build /out/example /tript-service
 
 FROM bin-unix AS bin-linux
 FROM bin-unix AS bin-darwin
 
 FROM scratch AS bin-windows
-COPY --from=build /out/example /example.exe
+COPY --from=build /out/example /tript-service.exe
 
 FROM bin-${TARGETOS} as bin
+
